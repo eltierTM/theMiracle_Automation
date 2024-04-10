@@ -6,32 +6,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  fetch-and-upload:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
+      fetch-and-upload:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v2
+        
+        - name: Set up Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: '3.x'
+        
+        - name: Install dependencies
+          run: pip install requests google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client python-dotenv
+        
+        - name: Fetch API Data and Write to CSV
+          env:
+            THEMIRACLE_API_USERNAME: ${{ secrets.THEMIRACLE_API_USERNAME }}
+            THEMIRACLE_API_PASSWORD: ${{ secrets.THEMIRACLE_API_PASSWORD }}
+          run: python fetch_api_data.py
+        
+        - name: Upload CSV to Google Drive
+          env:
+            GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          run: python upload_to_drive.py
     
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
-    
-    - name: Install dependencies
-      run: pip install requests google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client python-dotenv
-    
-    - name: Setup .env file
-      run: |
-        echo "THEMIRACLE_API_USERNAME=${{ secrets.THEMIRACLE_API_USERNAME }}" >> .env
-        echo "THEMIRACLE_API_PASSWORD=${{ secrets.THEMIRACLE_API_PASSWORD }}" >> .env
-        echo "GOOGLE_CREDENTIALS_JSON='${{ secrets.GOOGLE_CREDENTIALS_JSON }}'" >> .env
-      shell: bash
-    
-    - name: Fetch API Data and Write to CSV
-      run: |
-        python fetch_api_data.py
-      shell: bash
-    
-    - name: Upload CSV to Google Drive
-      run: |
-        python upload_to_drive.py
-      shell: bash
