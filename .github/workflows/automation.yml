@@ -1,0 +1,30 @@
+name: Content Monitoring Automation
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at midnight
+  workflow_dispatch:
+
+jobs:
+  fetch-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: pip install requests google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+    
+    - name: Fetch API Data and Write to CSV
+      run: python fetch_api_data.py
+    
+    - name: Upload CSV to Google Drive
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      run: |
+        echo $GOOGLE_CREDENTIALS > credentials.json
+        python upload_to_drive.py
