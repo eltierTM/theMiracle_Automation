@@ -49,14 +49,14 @@ def share_file(file_id, email_address, role='reader'):
         print(f"Failed to share file: {e}")
 
 def get_latest_csv_filename(prefix="sub_benefits"):
-    """Get the latest CSV filename based on the numerical suffix."""
     existing_files = glob.glob(f"{prefix}_*.csv")
     latest_file = None
-    max_id = 0
+    max_id = -1  # Initialize to -1 to handle the case where file IDs start from 0
     for file in existing_files:
         parts = os.path.basename(file).split('_')
-        if len(parts) > 1 and parts[1].split('.')[0].isdigit():
-            file_id = int(parts[1].split('.')[0])
+        # The ID is now expected to be part of the third element, and we split by '.' to isolate it
+        if len(parts) > 2 and parts[2].split('.')[0].isdigit():
+            file_id = int(parts[2].split('.')[0])
             if file_id > max_id:
                 max_id = file_id
                 latest_file = file
