@@ -11,8 +11,8 @@ def authenticate():
     """Authenticate with the API to get a bearer token."""
     url = 'https://www.themiracle.io/api/auth'
     payload = {
-        'email': os.getenv('API_USERNAME'),
-        'password': os.getenv('API_PASSWORD')
+        'email': os.getenv('THEMIRACLE_API_USERNAME'),
+        'password': os.getenv('THEMIRACLE_API_PASSWORD')
     }
     response = requests.post(url, json=payload)
     response.raise_for_status()
