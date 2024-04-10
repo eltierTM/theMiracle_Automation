@@ -58,12 +58,14 @@ def write_to_csv(data):
     """Write the fetched data to a CSV file with a numerical suffix."""
     file_id = get_next_file_id()
     filename = f"sub_benefits_{file_id}.csv"
-    keys = ['id', 'shortTitle', 'longTitle', 'keywords', 'shortDescription', 'longDescription', 'thumbnail', 'validFrom', 'validTo', 'status', 'url', 'tags', 'eventDate', 'location', 'actionDate', 'process', 'googleMapsUrl']
+    keys = ['id', 'shortTitle', 'longTitle', 'keywords', 'shortDescription', 'longDescription', 'thumbnail', 'validFrom', 'validTo', 'status', 'url', 'tags', 'eventDate', 'location', 'actionDate', 'process', 'googleMapsUrl', 'changes made']  # Added "changes made"
     with open(filename, 'w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=keys)
         writer.writeheader()
         for item in data:
             if item:  # Ensure item is not None
+                # Ensure every item has an empty "changes made" field
+                item['changes made'] = item.get('changes made', '')
                 writer.writerow({key: item.get(key, '') for key in keys})
     print(f"Data fetched and written to {filename} successfully.")
 
