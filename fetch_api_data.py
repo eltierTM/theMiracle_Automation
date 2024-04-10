@@ -2,6 +2,7 @@ import requests
 from dotenv import load_dotenv
 import os
 import csv
+import glob
 
 # Load environment variables from .env file
 load_dotenv()
@@ -16,6 +17,17 @@ def authenticate():
     response = requests.post(url, json=payload)
     response.raise_for_status()
     return response.json()['token']
+
+def get_next_file_id(prefix="sub_benefits"):
+    """Find the next available file ID based on existing files."""
+    existing_files = glob.glob(f"{prefix}_*.csv")
+    max_id = 0
+    for file in existing_files:
+        parts = os.path.basename(file).split('_')
+        if len(parts) > 1 and parts[1].isdigit():
+            max_id = max(max_id, int(parts[1]))
+    return max_id + 1
+
 
 def get_last_id(auth_token):
     """Get the last ID from the sub_benefits endpoint sorted by ID in descending order."""
@@ -42,8 +54,10 @@ def fetch_sub_benefit(auth_token, id):
     response.raise_for_status()
     return response.json()
 
-def write_to_csv(data, filename="sub_benefits.csv"):
-    """Write the fetched data to a CSV file."""
+def write_to_csv(data):
+    """Write the fetched data to a CSV file with a numerical suffix."""
+    file_id = get_next_file_id()
+    filename = f"sub_benefits_{file_id}.csv"
     keys = ['id', 'shortTitle', 'longTitle', 'keywords', 'shortDescription', 'longDescription', 'thumbnail', 'validFrom', 'validTo', 'status', 'url', 'tags', 'eventDate', 'location', 'actionDate', 'process', 'googleMapsUrl']
     with open(filename, 'w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=keys)
@@ -51,6 +65,7 @@ def write_to_csv(data, filename="sub_benefits.csv"):
         for item in data:
             if item:  # Ensure item is not None
                 writer.writerow({key: item.get(key, '') for key in keys})
+    print(f"Data fetched and written to {filename} successfully.")
 
 def main():
     token = authenticate()

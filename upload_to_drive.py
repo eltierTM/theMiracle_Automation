@@ -4,6 +4,7 @@ from googleapiclient.http import MediaFileUpload
 import os
 from dotenv import load_dotenv
 import json  # Import the json module
+import glob
 
 # Load environment variables
 load_dotenv()
@@ -47,14 +48,32 @@ def share_file(file_id, email_address, role='reader'):
     except Exception as e:
         print(f"Failed to share file: {e}")
 
+def get_latest_csv_filename(prefix="sub_benefits"):
+    """Get the latest CSV filename based on the numerical suffix."""
+    existing_files = glob.glob(f"{prefix}_*.csv")
+    latest_file = None
+    max_id = 0
+    for file in existing_files:
+        parts = os.path.basename(file).split('_')
+        if len(parts) > 1 and parts[1].split('.')[0].isdigit():
+            file_id = int(parts[1].split('.')[0])
+            if file_id > max_id:
+                max_id = file_id
+                latest_file = file
+    if not latest_file:
+        raise FileNotFoundError("No CSV file found.")
+    return latest_file
+
 def main():
-    # Upload a file to Google Drive
-    file_name = 'sub_benefits_renamed111.csv'  # Specify your file name here
+    # Determine the latest file name to upload
+    file_name = get_latest_csv_filename()
     file_id = upload_file(file_name, mimetype='text/csv')
 
     # Share the uploaded file with an email address
     email_address = 'daniel.vuksanovic@themiracle.io'  # Specify the email address to share with
     share_file(file_id, email_address, role='writer')  # 'writer' role allows editing; 'reader' for view only
+
+    print(f"Uploaded and shared file {file_name} successfully.")
 
 if __name__ == "__main__":
     main()
