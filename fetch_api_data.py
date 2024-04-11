@@ -58,16 +58,30 @@ def write_to_csv(data):
     """Write the fetched data to a CSV file with a numerical suffix."""
     file_id = get_next_file_id()
     filename = f"sub_benefits_{file_id}.csv"
-    keys = ['id', 'shortTitle', 'longTitle', 'keywords', 'shortDescription', 'longDescription', 'thumbnail', 'validFrom', 'validTo', 'status', 'url', 'tags', 'eventDate', 'location', 'actionDate', 'process', 'googleMapsUrl', 'changes made']  # Added "changes made"
+    # Include new keys for benefitSubcategoryNames and collectionName
+    keys = ['id', 'shortTitle', 'longTitle', 'keywords', 'benefitSubcategoryNames', 'collectionName', 'shortDescription', 'longDescription', 'thumbnail', 'validFrom', 'validTo', 'status', 'url', 'tags', 'eventDate', 'location', 'actionDate', 'process', 'googleMapsUrl', 'changes made', 'URL of Source'] 
     with open(filename, 'w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=keys)
         writer.writeheader()
         for item in data:
             if item:  # Ensure item is not None
+                # Extract and format benefitSubcategoryNames
+                subcategory_names = ', '.join([sub['name'] for sub in item.get('benefitSubcategories', [])])
+                item['benefitSubcategoryNames'] = subcategory_names
+
+                # Extract collectionName
+                collection_name = item.get('collection', {}).get('name', '')
+                item['collectionName'] = collection_name
+
                 # Ensure every item has an empty "changes made" field
                 item['changes made'] = item.get('changes made', '')
                 writer.writerow({key: item.get(key, '') for key in keys})
+
+                # Ensure every item has an empty "URL of Source" field
+                item['URL of Source'] = item.get('URL of Source', '')
+                writer.writerow({key: item.get(key, '') for key in keys})
     print(f"Data fetched and written to {filename} successfully.")
+
 
 def main():
     token = authenticate()
