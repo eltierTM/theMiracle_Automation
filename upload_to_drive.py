@@ -3,77 +3,72 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 import os
 from dotenv import load_dotenv
-import json  # Import the json module
+import json
 import glob
 
 # Load environment variables
 load_dotenv()
 
 def build_drive_service():
-    """Builds the Drive service using credentials from the .env file."""
+    """Builds the Drive and Sheets service using credentials from the .env file."""
     creds_json = os.getenv('GOOGLE_CREDENTIALS_JSON')
     if creds_json:
-        creds_dict = json.loads(creds_json)  # Parse the JSON string into a Python dictionary
-        creds = service_account.Credentials.from_service_account_info(creds_dict)
+        creds_dict = json.loads(creds_json)
+        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
+        creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=scopes)
     else:
         raise ValueError("GOOGLE_CREDENTIALS_JSON environment variable is not set or empty.")
-    return build('drive', 'v3', credentials=creds)
+    drive_service = build('drive', 'v3', credentials=creds)
+    sheets_service = build('sheets', 'v4', credentials=creds)
+    return drive_service, sheets_service
 
-def upload_file(filename, mimetype='text/csv'):
-    """Uploads a file to Google Drive and returns the file ID."""
-    service = build_drive_service()
-    
-    file_metadata = {'name': filename}
-    media = MediaFileUpload(filename, mimetype=mimetype)
-    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+def upload_csv_as_sheet(drive_service, filename, folder_id='1vYJFJYMQuvxa4ktF5n_AEsIT7xjh8DM-', mimetype='text/csv'):
+    """Uploads a CSV file to Google Drive and converts it to a Google Sheets format."""
+    file_metadata = {
+        'name': os.path.basename(filename),
+        'parents': [folder_id],
+        'mimeType': 'application/vnd.google-apps.spreadsheet'
+    }
+    media = MediaFileUpload(filename, mimetype=mimetype, resumable=True)
+    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     file_id = file.get('id')
-    print('File ID:', file_id)
+    print('Google Sheet ID:', file_id)
     return file_id
 
-def share_file(file_id, email_address, role='reader'):
-    """Shares a file with the given email address using the Drive API."""
-    service = build_drive_service()
-    file_permission = {
-        'type': 'user',
-        'role': role,
-        'emailAddress': email_address
+def add_sheets_to_spreadsheet(sheets_service, spreadsheet_id, sheet_titles):
+    """Adds new sheets to an existing spreadsheet."""
+    batch_update_spreadsheet_request_body = {
+        'requests': [
+            {'addSheet': {'properties': {'title': title}}} for title in sheet_titles
+        ]
     }
-    try:
-        service.permissions().create(
-            fileId=file_id,
-            body=file_permission,
-            fields='id'
-        ).execute()
-        print(f"File {file_id} shared with {email_address} as a {role}.")
-    except Exception as e:
-        print(f"Failed to share file: {e}")
+
+    response = sheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body=batch_update_spreadsheet_request_body
+    ).execute()
+    print(f"Added sheets: {sheet_titles}")
 
 def get_latest_csv_filename(prefix="sub_benefits"):
+    """Find the latest CSV file with a specified prefix."""
     existing_files = glob.glob(f"{prefix}_*.csv")
-    latest_file = None
-    max_id = -1  # Initialize to -1 to handle the case where file IDs start from 0
-    for file in existing_files:
-        parts = os.path.basename(file).split('_')
-        # The ID is now expected to be part of the third element, and we split by '.' to isolate it
-        if len(parts) > 2 and parts[2].split('.')[0].isdigit():
-            file_id = int(parts[2].split('.')[0])
-            if file_id > max_id:
-                max_id = file_id
-                latest_file = file
+    latest_file = max(existing_files, key=os.path.getctime) if existing_files else None
     if not latest_file:
         raise FileNotFoundError("No CSV file found.")
     return latest_file
 
 def main():
-    # Determine the latest file name to upload
+    folder_id = '1vYJFJYMQuvxa4ktF5n_AEsIT7xjh8DM-'
+    drive_service, sheets_service = build_drive_service()
     file_name = get_latest_csv_filename()
-    file_id = upload_file(file_name, mimetype='text/csv')
+    
+    # Convert the CSV file to a Google Sheet and upload
+    sheet_id = upload_csv_as_sheet(drive_service, file_name, folder_id)
+    
+    # Add additional sheets
+    add_sheets_to_spreadsheet(sheets_service, sheet_id, ['Data_Coops_changed', 'Data_Coops_new'])
 
-    # Share the uploaded file with an email address
-    email_address = 'daniel.vuksanovic@themiracle.io'  # Specify the email address to share with
-    share_file(file_id, email_address, role='writer')  # 'writer' role allows editing; 'reader' for view only
-
-    print(f"Uploaded and shared file {file_name} successfully.")
+    print(f"Uploaded {file_name} as a Google Sheet and added additional sheets successfully.")
 
 if __name__ == "__main__":
     main()

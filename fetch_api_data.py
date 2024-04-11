@@ -59,7 +59,7 @@ def write_to_csv(data):
     file_id = get_next_file_id()
     filename = f"sub_benefits_{file_id}.csv"
     # Include new keys for benefitSubcategoryNames and collectionName
-    keys = ['id', 'shortTitle', 'longTitle', 'keywords', 'benefitSubcategoryNames', 'collectionName', 'shortDescription', 'longDescription', 'thumbnail', 'validFrom', 'validTo', 'status', 'url', 'tags', 'eventDate', 'location', 'actionDate', 'process', 'googleMapsUrl', 'changes made', 'URL of Source'] 
+    keys = ['id', 'shortTitle', 'longTitle', 'keywords', 'benefitSubcategoryNames', 'collectionName', 'shortDescription', 'longDescription', 'thumbnail', 'validFrom', 'validTo', 'status', 'url', 'tags', 'eventDate', 'location', 'actionDate', 'process', 'googleMapsUrl', 'URL of Source', 'changes made'] 
     with open(filename, 'w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=keys)
         writer.writeheader()
@@ -72,14 +72,15 @@ def write_to_csv(data):
                 # Extract collectionName
                 collection_name = item.get('collection', {}).get('name', '')
                 item['collectionName'] = collection_name
+                
+                # Ensure every item has an empty "URL of Source" field
+                item['URL of Source'] = item.get('URL of Source', '')
+                writer.writerow({key: item.get(key, '') for key in keys})
 
                 # Ensure every item has an empty "changes made" field
                 item['changes made'] = item.get('changes made', '')
                 writer.writerow({key: item.get(key, '') for key in keys})
 
-                # Ensure every item has an empty "URL of Source" field
-                item['URL of Source'] = item.get('URL of Source', '')
-                writer.writerow({key: item.get(key, '') for key in keys})
     print(f"Data fetched and written to {filename} successfully.")
 
 
